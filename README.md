@@ -1,1 +1,1 @@
-# Case-Study-2
+This repository contains the data, code, and results from the second Case Study. 
