@@ -1,0 +1,216 @@
+---
+title: "Case Study 2"
+author: "Zoheb Allam"
+date: "December 8, 2016"
+output: html_document
+---
+#Question 1
+This is the code for creating the matrix and printing it from SAS.
+
+proc iml;
+reset print;
+x={4 5 1 2, 1 0 3 5, 2 1 8 2};
+
+quit;
+
+This is the code for creating the matrix and printing it from R .
+```{r}
+X = matrix(
+   c(4,1,2,5,0,1,1,3,8,2,5,2),
+   nrow=3,
+   ncol=4)
+X
+```
+
+This is the code for creating the matrix and printing it from Python.
+
+import numpy as np
+X = np.matrix('4 5 1 2; 1 0 3 5; 2 1 8 2')
+print (X) 
+
+#Question 2
+This is the code to download the data
+```{r}
+library(tseries)
+AGIOdata <- get.hist.quote('AGIO',quote="Close")
+```
+
+This is the code to calculate log returns and volatility 
+```{r}
+AGIOret <- log(lag(AGIOdata)) - log(AGIOdata)
+AGIOvol <- sd(AGIOret) * sqrt(250) * 100
+```
+
+This is the function for volatility
+```{r}
+getVol <- function(d, logrets)
+{
+  
+  var = 0
+  
+  lam = 0
+  
+  varlist <- c()
+  
+  for (r in logrets) {
+    
+    lam = lam*(1 - 1/d) + 1
+    
+    var = (1 - 1/lam)*var + (1/lam)*r^2
+    
+    varlist <- c(varlist, var)
+    
+  }
+  
+  sqrt(varlist)
+}
+```
+
+This is the code for calculating volatility over the length of series for the different decay factors and the plot with the results.
+```{r}
+volest <- getVol(10,AGIOret)
+
+volest2 <- getVol(30,AGIOret)
+
+volest3 <- getVol(100,AGIOret)
+
+plot(volest,type="l")
+
+lines(volest2,type="l",col="red")
+
+lines(volest3, type = "l", col="blue")
+```
+
+#Question 3
+This is the code for downloading the Organge data set.
+```{r}
+data(Orange)
+Orange
+```
+
+This code calculates the mean and the median of the trink circumference for different sizes of the trees.
+```{r}
+mean <- tapply(Orange$circumference,Orange$Tree, mean,  na.rm=TRUE) 
+median <- tapply(Orange$circumference,Orange$Tree, median,  na.rm=TRUE)
+cbind(mean, median)
+```
+
+This code makes a scatter plot of the trunk circumference against the age of the trees. 
+```{r}
+library (ggplot2)
+qplot(circumference, age, data=Orange,color=Tree, 
+      xlab="Circumference", ylab="Age") 
+```
+
+This code displays the trunk circumference on a comparitive boxplot against trees in increasing order.
+```{r}
+qplot(factor(Tree), circumference, data = Orange, geom = "boxplot")
+```
+
+#Question 4
+###The next set of codes answer part i of Question 4.
+
+
+The first step is to download the data into R.
+```{r}
+setwd("C:/Users/Laptop/Desktop/CaseStudy_2")
+TempData <- read.csv("TEMP.csv", header=T, na.strings=c("","NA"))
+```
+
+In order to work with the year variable, we need to create a new variable that only has the year information.
+```{r}
+TempData$Year = as.numeric(gsub("^.*([0-9]{4}).*$", "\\1" , TempData$Date))
+```
+
+Since there are a lot of missing in the data file and the missing is for both the average temp variables, we can drop rows from the data with missing information.
+```{r}
+TempDataComplete = TempData[!is.na(TempData$Monthly.AverageTemp),]
+```
+
+Then we write a function that gives us the difference between the max and the min monthly average and we run it on the data file. 
+```{r}
+rangediff = function(x) {
+  range = range(x)
+  range[2] - range[1]
+}
+TempData2 = tapply(TempDataComplete$Monthly.AverageTemp, TempDataComplete$Country, rangediff)
+str(TempData2) 
+```
+
+Since the question asks only for data from 1900, we create a new data file from the Year variable that only contains data for 1900 and up. 
+```{r}
+TempData1900plus = TempDataComplete[TempDataComplete$Year >= "1900",]
+```
+
+Finally, we apply the function to the new data file and sort it so that we have the top 20 countries.
+```{r}
+TempDataRanges = tapply(TempData1900plus$Monthly.AverageTemp, TempData1900plus$Country, rangediff)
+Rangestop20 = sort(TempDataRanges)[1:20]
+Rangestop20
+```
+
+Then we can plot the relationship. 
+```{r}
+plot(Rangestop20, xlab = "Country", ylab = "Temperature")
+```
+
+### The next set of codes answer part ii of Question 4.
+
+
+The code below creates a subset of the data file with only data points of the US from 1990 and up.
+```{r}
+TempsData1990plus = TempDataComplete[TempDataComplete$Year >= "1990",] 
+USTempData = TempsData1990plus[TempsData1990plus$Country == 'United States',]
+```
+
+Once we have that, we convert Fahrenheit to Celcsius. An R package that can do that is weathermetrics. 
+```{r}
+library(weathermetrics)
+USTempData$temp.fahr <- celsius.to.fahrenheit(USTempData$Monthly.AverageTemp, round = 2)
+```
+
+Then we calculate average lang temperature by year and plot it.
+```{r}
+UStempavtemp = tapply(USTempData$temp.fahr, USTempData$Year, mean)
+xaxis = 1990 + 0:(length(UStempavtemp)-1)
+plot(xaxis, UStempavtemp, xlab = 'Year', ylab='Temperature')
+```
+
+### The next set of codes answer part iii of Question 4.
+
+
+The code below downloads the data for cities into R. 
+```{r}
+CityTempData <- read.csv("CityTemp.csv", header=T, na.strings=c("","NA"))
+```
+
+The code below changes the original date variable to only have information on the year. We then drop the rows that are missing from the data.
+```{r}
+CityTempData$Year = as.numeric(gsub("^.*([0-9]{4}).*$", "\\1" , CityTempData$Date))
+CityTempComplete = CityTempData[!is.na(CityTempData$Monthly.AverageTemp),]
+```
+
+Using the same function as before, we find the difference between the  min and max temps but we do this now by City instead of Country.
+```{r}
+CityTempData2 = tapply(CityTempComplete$Monthly.AverageTemp, CityTempComplete$City, rangediff)
+str(CityTempData2) 
+```
+
+Since the questions asks only for data from 1900 and up, we create a new data file with only that information.
+```{r}
+CityTempData1900plus = CityTempComplete[CityTempComplete$Year >= "1900",]
+```
+
+Finally, we have identify and sort the top 20 cities with the maximum difference. 
+```{r}
+CityTempDataRanges = tapply(CityTempData1900plus$Monthly.AverageTemp, CityTempData1900plus$City, rangediff)
+CityRangestop20 = sort(CityTempDataRanges)[1:20]
+CityRangestop20
+```
+
+We then plot the relationship.
+```{r}
+plot(CityRangestop20, xlab = "Country", ylab = "Temperature")
+```
+
+When examining the plots of country vs city, we should see that the cities that have the largest range of temperatures are in the countries that also have the largest range of temperatures.  
